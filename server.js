@@ -4,8 +4,10 @@ const bodyParser = require("body-parser");
 const _ = require("lodash");
 const yfin = require("yahoo-finance");
 const axios = require('axios');
+const cors = require("cors");
 
 const app = express();
+app.use(cors());
 
 app.set('view engine', 'ejs');
 
