@@ -143,6 +143,7 @@ app.get("/getData", function(req, res) {
           lastAUM = lastAUM * 1.00007412;
           aum.push(lastAUM);
         }
+        aum.push(101323);
 
         js["AUM"] = {
           dates: aumDates,
