@@ -5,6 +5,7 @@ const _ = require("lodash");
 const yfin = require("yahoo-finance");
 const axios = require('axios');
 const cors = require("cors");
+const e = require("express");
 
 const app = express();
 app.use(cors());
@@ -131,22 +132,26 @@ app.get("/getData", function(req, res) {
         }
 
         // Update AUM
-        for (let i = 1; i < js[oldestTicker].data.length; i++) {
+        for (let i = 0; i < js[oldestTicker].data.length; i++) {
           let addToAUM = 0;
           for (let [ticker, value] of Object.entries(js).slice(0, -1)) {
             let data = value.data;
-            // data.unshift(data[i] - js[ticker].entryPrice);
-            if (data[i] != null && data[i-1] != null) {
-              addToAUM += ((data[i] - data[i-1]) * js[ticker].shares);
-              // console.log(`${ticker}: ${addToAUM}`);
+            if (i == 0 && data[i] != null) {
+              addToAUM += ((data[i] - value.entryPrice) * js[ticker].shares);
+            } else {
+              if (data[i] != null && data[i-1] != null) {
+                addToAUM += ((data[i] - data[i-1]) * js[ticker].shares);
+                // console.log(`${ticker}: ${addToAUM}`);
+              }
             }
+            addToAUM += (aum[aum.length - 1] - addToAUM) * 0.000058847;
           }
           // console.log(aum[aum.length - 1] + addToAUM);
           aum.push(Number.parseFloat((aum[aum.length - 1] + addToAUM).toFixed(2)));
-          aumDates.push(js[oldestTicker].dates[i-1])
+          aumDates.push(js[oldestTicker].dates[i])
         }
-        console.log(aum.length);
-        console.log(aumDates.length);
+        console.log(aum);
+        console.log(aumDates);
 
         // for (let ticker in js) {
         //   if (ticker != "SPY") {
