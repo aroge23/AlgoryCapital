@@ -52,13 +52,6 @@ async function getData(tickers, startDate) {
   return myData;
 }
 
-// console.log(aumDates);
-// console.log(aum);
-// const nov = [100865.52, 100313.09, 99671.21, 99804.43, 99971.61, 100115.46, 99644.79, 101062.00, 101525.29, 101416.57, 101588.03, 101460.39, 101548.17, 101727.74, 101323];
-// for (var i = 0; i < nov.length; i++) {
-//   aum.push(nov[i]);
-// }
-
 
 
 app.get("/getData", function(req, res) {
@@ -141,29 +134,13 @@ app.get("/getData", function(req, res) {
             } else {
               if (data[i] != null && data[i-1] != null) {
                 addToAUM += ((data[i] - data[i-1]) * js[ticker].shares);
-                // console.log(`${ticker}: ${addToAUM}`);
               }
             }
             addToAUM += (aum[aum.length - 1] - addToAUM) * 0.000058847;
           }
-          // console.log(aum[aum.length - 1] + addToAUM);
           aum.push(Number.parseFloat((aum[aum.length - 1] + addToAUM).toFixed(2)));
           aumDates.push(js[oldestTicker].dates[i])
         }
-        console.log(aum);
-        console.log(aumDates);
-
-        // for (let ticker in js) {
-        //   if (ticker != "SPY") {
-        //     let data = js[ticker].data;
-        //     let dates = js[ticker].dates;
-        //     for (let i = 0; i < data.length; i++) {
-        //       if (data[i] != null) {
-        //         console.log(data[i]);
-        //       }
-        //     }
-        //   }
-        // }
 
         js["AUM"] = {
           dates: aumDates,
