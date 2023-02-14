@@ -136,7 +136,7 @@ app.get("/getData", function(req, res) {
                 addToAUM += ((data[i] - data[i-1]) * js[ticker].shares);
               }
             }
-            addToAUM += (aum[aum.length - 1] - addToAUM) * 0.000058847;
+            addToAUM += (aum[aum.length - 1] - addToAUM) * 0.000038847;
           }
           aum.push(Number.parseFloat((aum[aum.length - 1] + addToAUM).toFixed(2)));
           aumDates.push(js[oldestTicker].dates[i])
