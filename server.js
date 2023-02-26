@@ -63,7 +63,7 @@ app.get("/getData", function(req, res) {
       var js = {};
       var tickers = [];
       var startDates = [];
-      const aum = [];
+      const aum = [100536.24];
       var aumDates = [];
       var shares = [];
       var entryPrice = [];
@@ -127,12 +127,13 @@ app.get("/getData", function(req, res) {
             addToAUM += (aum[aum.length - 1] - addToAUM) * 0.000038847;
           }
           aum.push(Number.parseFloat((aum[aum.length - 1] + addToAUM).toFixed(2)));
-          aumDates.push(js[oldestTicker].dates[i])
+          aumDates.push(js[oldestTicker].dates[i]);
+          if (i == 0) {aum.shift();}
         }
 
         // AUM percentage
         for (let i = 0; i < aum.length; i++) {
-          aumPercentage.push(Number(((aum[i] - 100000) / 1000).toFixed(3)));
+          aumPercentage.push(Number(((aum[i] - 100536.24) / 100536.24 * 100).toFixed(3)));
         }
 
         // SPY percentage
