@@ -55,22 +55,6 @@ async function getData(tickers, startDate) {
 
 
 app.get("/getData", function(req, res) {
-
-  // const aumDates = ["2022-06-30","2022-07-05","2022-07-06","2022-07-07","2022-07-08","2022-07-11","2022-07-12","2022-07-13","2022-07-14","2022-07-15","2022-07-18","2022-07-19","2022-07-20","2022-07-21","2022-07-22","2022-07-25","2022-07-26","2022-07-27","2022-07-28","2022-07-29","2022-08-01","2022-08-02","2022-08-03","2022-08-04","2022-08-05","2022-08-08","2022-08-09","2022-08-10","2022-08-11","2022-08-12","2022-08-15","2022-08-16","2022-08-17","2022-08-18","2022-08-19","2022-08-22","2022-08-23","2022-08-24","2022-08-25","2022-08-26","2022-08-29","2022-08-30","2022-08-31","2022-09-01","2022-09-02","2022-09-06","2022-09-07","2022-09-08","2022-09-09","2022-09-12","2022-09-13","2022-09-14","2022-09-15","2022-09-16","2022-09-19","2022-09-20","2022-09-21","2022-09-22","2022-09-23","2022-09-26","2022-09-27","2022-09-28","2022-09-29","2022-09-30","2022-10-03","2022-10-04","2022-10-05"];
-
-
-  const aum = [100536.24];
-
-  // for (var i = 0; i < 19; i++) {
-  //   aum.push(Number.parseFloat((aum[aum.length - 1] * 1.000058847).toFixed(2)));
-  // }
-  // for (var i = 0; i < 23; i++) {
-  //   aum.push(Number.parseFloat((aum[aum.length - 1] * 1.00006631).toFixed(2)));
-  // }
-  // for (var i = 0; i < 24; i++) {
-  //   aum.push(Number.parseFloat((aum[aum.length - 1] * 1.000088122).toFixed(2)));
-  // }
-
   Equity.find({}, function(err, results) {
     if (err) {
       console.log(err);
@@ -79,11 +63,12 @@ app.get("/getData", function(req, res) {
       var js = {};
       var tickers = [];
       var startDates = [];
+      const aum = [];
       var aumDates = [];
       var shares = [];
       var entryPrice = [];
       var aumPercentage = [];
-      var spyPercentage = [];
+      var spyPercentage = [0.00];
       results.forEach(function(result) {
         tickers.push(result.ticker);
         startDates.push(result.startDate);
@@ -151,7 +136,11 @@ app.get("/getData", function(req, res) {
         }
 
         // SPY percentage
-        // for (let i = 0; i < )
+        for (let i = 1; i < js["SPY"].data.length; i++) {
+          spyPercentage.push(Number(((js["SPY"].data[i] - js["SPY"].data[0]) / js["SPY"].data[0] * 100).toFixed(3)));
+        }
+
+        js["SPY"].spyPercentage = spyPercentage;
 
         js["AUM"] = {
           dates: aumDates,
