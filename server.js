@@ -131,22 +131,9 @@ app.get("/getData", function(req, res) {
           if (i == 0) {aum.shift();}
         }
 
-        // AUM percentage
-        for (let i = 0; i < aum.length; i++) {
-          aumPercentage.push(Number(((aum[i] - 100536.24) / 100536.24 * 100).toFixed(3)));
-        }
-
-        // SPY percentage
-        for (let i = 1; i < js["SPY"].data.length; i++) {
-          spyPercentage.push(Number(((js["SPY"].data[i] - js["SPY"].data[0]) / js["SPY"].data[0] * 100).toFixed(3)));
-        }
-
-        js["SPY"].spyPercentage = spyPercentage;
-
         js["AUM"] = {
           dates: aumDates,
           aum: aum,
-          aumPercentage: aumPercentage
         }
 
         res.send(js);
