@@ -34,8 +34,9 @@ const aumDataSchema = {
 
 const AUMData = mongoose.model("AUMData", aumDataSchema);
 
-async function updateAUM(js, spy, aum, cash) {
-  for (let i = 0; i < spy.dates.length; i++) {
+async function updateAUM(startDate, spy, js, cash) {
+  var aum = [];
+  for (let i = spy.dates.indexOf(startDate); i < spy.dates.length; i++) {
     var curDate = spy.dates[i];
     var addToAUM = cash;
     for (var [ticker, value] of Object.entries(js)) {
@@ -55,6 +56,7 @@ async function updateAUM(js, spy, aum, cash) {
   }
   return { aum, cash };
 }
+
 
 function findEarliestDate(dates){
     if(dates.length == 0) return null;
@@ -143,34 +145,74 @@ app.get("/getData", function(req, res) {
         }
 
         let cash = 100536.24;
-        let aumTest = [];
 
-
-        updateAUM(js, js['SPY'], aumTest, cash).then((result) => {
-          // drop previously populated AUM collection
-          AUMData.deleteMany({}, (err, results) => {
-            if (err) {
-              console.log(err);
+        //check if aum collection has any documents
+        AUMData.find({}, (err, aumResults) => {
+          if (err) {
+            console.log(err);
+          } else {
+            var spy = js['SPY'];
+            if (aumResults.length == 0) {
+              updateAUM(spy.dates.at(0), spy, js, cash).then((result) => {
+                // drop previously populated AUM collection
+                // AUMData.deleteMany({}, (err, results) => {
+                //   if (err) {
+                //     console.log(err);
+                //   }
+                // });
+      
+                var newAUMData = new AUMData({
+                  cash: result.cash,
+                  data: result.aum,
+                  dates: spy.dates
+                });
+                newAUMData.save();
+                js["AUM"] = {
+                  cash: result.cash,
+                  aum: result.aum,
+                  dates: spy.dates,
+                }
+                res.send(js);
+              });
+            } else {
+              var aum = aumResults[0];
+              if (aum.dates.at(-1) < spy.dates.at(-1)) {
+                updateAUM(aum.dates.at(-1), spy, js, aum.cash).then((result) => {
+                  let newDates = spy.dates.slice(spy.dates.indexOf(aum.dates.at(-1)) + 1);
+                  AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {$push: {
+                    data: result.aum,
+                    dates: newDates
+                  }}, (err, testResult) => {
+                    if (err) {
+                      console.log(err);
+                    }
+                    AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {cash: result.cash}, (err, testResult) => {
+                      if (err) {
+                        console.log(err);
+                      }
+                      AUMData.findOne({_id: aum._id.toHexString()}, (err, testResult) => {
+                        js["AUM"] = {
+                          cash: testResult.cash,
+                          aum: testResult.data,
+                          dates: testResult.dates
+                        }
+                        res.send(js);
+                      })
+                    });
+                  })
+                })
+              } else {
+                js["AUM"] = {
+                  cash: aum.cash,
+                  aum: aum.data,
+                  dates: aum.dates,
+                }
+                res.send(js);
+              }
             }
-          });
-
-          var newAUMData = new AUMData({
-            cash: result.cash,
-            data: result.aum,
-            dates: js["SPY"].dates
-          });
-          newAUMData.save();
-          js["AUM"] = {
-            dates: js["SPY"].dates,
-            aum: result.aum,
           }
-          res.send(js);
-          // res.send({
-          //   cash: result.cash,
-          //   aum: result.aum,
-          //   dates: js["SPY"].dates
-          // });
-        });
+        })
+
 
         // Update AUM
         // for (let i = 0; i < js[oldestTicker].data.length; i++) {
