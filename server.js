@@ -35,7 +35,7 @@ const aumDataSchema = {
 const AUMData = mongoose.model("AUMData", aumDataSchema);
 
 async function updateAUM(js, spy, aum, cash) {
-  for (let i = 1; i < spy.dates.length; i++) {
+  for (let i = 0; i < spy.dates.length; i++) {
     var curDate = spy.dates[i];
     var addToAUM = cash;
     for (var [ticker, value] of Object.entries(js)) {
@@ -44,7 +44,7 @@ async function updateAUM(js, spy, aum, cash) {
           cash -= (value.entryPrice * value.shares);
           addToAUM -= value.entryPrice * value.shares;
         } if (curDate >= value.entryDate) {
-          addToAUM += (value.data[i - 1] * value.shares);
+          addToAUM += (value.data[i] * value.shares);
         }
       }
     }
@@ -153,7 +153,7 @@ app.get("/getData", function(req, res) {
               console.log(err);
             }
           });
-          
+
           var newAUMData = new AUMData({
             cash: result.cash,
             data: result.aum,
