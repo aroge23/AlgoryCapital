@@ -26,6 +26,36 @@ const equitiesSchema = {
 
 const Equity = mongoose.model("Equity", equitiesSchema);
 
+const aumDataSchema = {
+  cash: Number,
+  data: [Number],
+  dates: [String]
+}
+
+const AUMData = mongoose.model("AUMData", aumDataSchema);
+
+async function updateAUM(js, spy, aum, cash) {
+  for (let i = 1; i < spy.dates.length; i++) {
+    var curDate = spy.dates[i];
+    var addToAUM = cash;
+    for (var [ticker, value] of Object.entries(js)) {
+      if (ticker != 'SPY'){
+        if (curDate == value.entryDate) {
+          cash -= (value.entryPrice * value.shares);
+          addToAUM -= value.entryPrice * value.shares;
+        } if (curDate >= value.entryDate) {
+          addToAUM += (value.data[i - 1] * value.shares);
+        }
+      }
+    }
+    cash = Number((cash * 1.000088847).toFixed(2));
+    if (addToAUM != null) {
+      aum.push(Number(addToAUM.toFixed(2)));
+    }
+  }
+  return { aum, cash };
+}
+
 function findEarliestDate(dates){
     if(dates.length == 0) return null;
     var earliestDate = dates[0];
@@ -67,8 +97,6 @@ app.get("/getData", function(req, res) {
       var aumDates = [];
       var shares = [];
       var entryPrice = [];
-      var aumPercentage = [];
-      var spyPercentage = [0.00];
       results.forEach(function(result) {
         tickers.push(result.ticker);
         startDates.push(result.startDate);
@@ -88,8 +116,10 @@ app.get("/getData", function(req, res) {
             var dates = [];
             var idx = tickers.indexOf(ticker)
             for (var i = data[ticker].length - 1; i >= 0; i--) {
-              adjClose.push(data[ticker][i].adjClose);
-              dates.push(JSON.stringify(data[ticker][i].date).slice(1, 11));
+              if (data[ticker][i].adjClose != null) {
+                adjClose.push(data[ticker][i].adjClose);
+                dates.push(JSON.stringify(data[ticker][i].date).slice(1, 11));
+              }
             }
 
             var start = dates.indexOf(startDates[idx]);
@@ -112,31 +142,59 @@ app.get("/getData", function(req, res) {
           }
         }
 
-        // Update AUM
-        for (let i = 0; i < js[oldestTicker].data.length; i++) {
-          let addToAUM = 0;
-          for (let [ticker, value] of Object.entries(js).slice(0, -1)) {
-            let data = value.data;
-            if (i == 0 && data[i] != null) {
-              addToAUM += ((data[i] - value.entryPrice) * js[ticker].shares);
-            } else {
-              if (data[i] != null && data[i-1] != null) {
-                addToAUM += ((data[i] - data[i-1]) * js[ticker].shares);
-              }
+        let cash = 100536.24;
+        let aumTest = [];
+
+
+        updateAUM(js, js['SPY'], aumTest, cash).then((result) => {
+          // drop previously populated AUM collection
+          AUMData.deleteMany({}, (err, results) => {
+            if (err) {
+              console.log(err);
             }
-            addToAUM += (aum[aum.length - 1] - addToAUM) * 0.000038847;
+          });
+          
+          var newAUMData = new AUMData({
+            cash: result.cash,
+            data: result.aum,
+            dates: js["SPY"].dates
+          });
+          newAUMData.save();
+          js["AUM"] = {
+            dates: js["SPY"].dates,
+            aum: result.aum,
           }
-          aum.push(Number.parseFloat((aum[aum.length - 1] + addToAUM).toFixed(2)));
-          aumDates.push(js[oldestTicker].dates[i]);
-          if (i == 0) {aum.shift();}
-        }
+          res.send(js);
+          // res.send({
+          //   cash: result.cash,
+          //   aum: result.aum,
+          //   dates: js["SPY"].dates
+          // });
+        });
 
-        js["AUM"] = {
-          dates: aumDates,
-          aum: aum,
-        }
+        // Update AUM
+        // for (let i = 0; i < js[oldestTicker].data.length; i++) {
+        //   let addToAUM = 0;
+        //   for (let [ticker, value] of Object.entries(js).slice(0, -1)) {
+        //     let data = value.data;
+        //     if (i == 0 && data[i] != null) {
+        //       addToAUM += ((data[i] - value.entryPrice) * js[ticker].shares);
+        //     } else {
+        //       if (data[i] != null && data[i-1] != null) {
+        //         addToAUM += ((data[i] - data[i-1]) * js[ticker].shares);
+        //       }
+        //     }
+        //     addToAUM += (aum[aum.length - 1] - addToAUM) * 0.000038847;
+        //   }
+        //   aum.push(Number.parseFloat((aum[aum.length - 1] + addToAUM).toFixed(2)));
+        //   aumDates.push(js[oldestTicker].dates[i]);
+        //   if (i == 0) {aum.shift();}
+        // }
 
-        res.send(js);
+        // js["AUM"] = {
+        //   dates: aumDates,
+        //   aum: aum,
+        // }
       }).catch((err) => {
         res.send(err);
         console.log(err);
