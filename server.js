@@ -36,7 +36,7 @@ const AUMData = mongoose.model("AUMData", aumDataSchema);
 
 async function updateAUM(startDate, spy, js, cash) {
   var aum = [];
-  for (let i = spy.dates.indexOf(startDate); i < spy.dates.length; i++) {
+  for (let i = spy.dates.indexOf(startDate) + 1; i < spy.dates.length; i++) {
     var curDate = spy.dates[i];
     var addToAUM = cash;
     for (var [ticker, value] of Object.entries(js)) {
