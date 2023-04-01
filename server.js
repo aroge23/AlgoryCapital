@@ -36,7 +36,7 @@ const AUMData = mongoose.model("AUMData", aumDataSchema);
 
 async function updateAUM(startDate, spy, js, cash) {
   var aum = [];
-  for (let i = spy.dates.indexOf(startDate) + 1; i < spy.dates.length; i++) {
+  for (let i = spy.dates.indexOf(startDate); i < spy.dates.length; i++) {
     var curDate = spy.dates[i];
     var addToAUM = cash;
     for (var [ticker, value] of Object.entries(js)) {
@@ -49,7 +49,7 @@ async function updateAUM(startDate, spy, js, cash) {
         }
       }
     }
-    cash = Number((cash * 1.000088847).toFixed(2));
+    cash = Number((cash * 1.000098847).toFixed(2));
     if (addToAUM != null) {
       aum.push(Number(addToAUM.toFixed(2)));
     }
@@ -179,17 +179,20 @@ app.get("/getData", function(req, res) {
               if (aum.dates.at(-1) < spy.dates.at(-1)) {
                 updateAUM(aum.dates.at(-1), spy, js, aum.cash).then((result) => {
                   let newDates = spy.dates.slice(spy.dates.indexOf(aum.dates.at(-1)) + 1);
-                  AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {$push: {
-                    data: result.aum,
-                    dates: newDates
-                  }}, (err, testResult) => {
+                  AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {
+                    $push: {
+                      data: result.aum,
+                      dates: newDates
+                    },
+                    cash: result.cash
+                  }, (err, testResult) => {
                     if (err) {
                       console.log(err);
                     }
-                    AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {cash: result.cash}, (err, testResult) => {
-                      if (err) {
-                        console.log(err);
-                      }
+                    // AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {cash: result.cash}, (err, testResult) => {
+                    //   if (err) {
+                    //     console.log(err);
+                    //   }
                       AUMData.findOne({_id: aum._id.toHexString()}, (err, testResult) => {
                         js["AUM"] = {
                           cash: testResult.cash,
@@ -198,7 +201,7 @@ app.get("/getData", function(req, res) {
                         }
                         res.send(js);
                       })
-                    });
+                    // });
                   })
                 })
               } else {
