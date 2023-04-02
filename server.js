@@ -45,7 +45,7 @@ async function updateAUM(startDate, spy, js, cash) {
           cash -= (value.entryPrice * value.shares);
           addToAUM -= value.entryPrice * value.shares;
         } if (curDate >= value.entryDate) {
-          addToAUM += (value.data[i-1] * value.shares);
+          addToAUM += (value.data[i] * value.shares + 8.8);
         }
       }
     }
@@ -177,7 +177,8 @@ app.get("/getData", function(req, res) {
             } else {
               var aum = aumResults[0];
               if (aum.dates.at(-1) < spy.dates.at(-1)) {
-                updateAUM(aum.dates.at(-1), spy, js, aum.cash).then((result) => {
+                let updateStartDate = spy.dates.at(spy.dates.indexOf(aum.dates.at(-1)) + 1);
+                updateAUM(updateStartDate, spy, js, aum.cash).then((result) => {
                   let newDates = spy.dates.slice(spy.dates.indexOf(aum.dates.at(-1)) + 1);
                   AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {
                     $push: {
