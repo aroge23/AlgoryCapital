@@ -45,7 +45,7 @@ async function updateAUM(startDate, spy, js, cash) {
           cash -= (value.entryPrice * value.shares);
           addToAUM -= value.entryPrice * value.shares;
         } if (curDate >= value.entryDate) {
-          addToAUM += (value.data[i] * value.shares);
+          addToAUM += (value.data[i-1] * value.shares);
         }
       }
     }
