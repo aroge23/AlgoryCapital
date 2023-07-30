@@ -19,12 +19,19 @@ app.use(express.static("public"));
 
 mongoose.connect("mongodb+srv://admin:admin123@cluster0.ftlnrsd.mongodb.net/algoryPortDB");
 
+const divSchema = {
+  lastUpdate: String,
+  payoutRatio: Number,
+  payout: Number,
+  frequency: Number
+}
+
 const equitiesSchema = {
   ticker: String,
   startDate: String,
   entryPrice: Number,
   shares: Number,
-  divLastUpdate: String,
+  divInfo: divSchema,
   assetClass: String
 };
 
@@ -41,11 +48,44 @@ const AUMData = mongoose.model("AUMData", aumDataSchema);
 const apikey = process.env.API_KEY;
 const fetchURL = "https://api.polygon.io/v3/reference/dividends?apiKey=" + apikey + "&ticker=";
 
+async function getDivUpdate(ticker, value, spy) {
+  // console.log(ticker);
+  var addToAUM = 0;
+  fetch(fetchURL + ticker).then(
+    result => result.json()
+  ).then(
+    async (output) => {
+      if (output.results != undefined && output.results.length > 0) {
+        // console.log(ticker, value)
+        for (const divEntry of output.results) {
+          if (divEntry.pay_date > spy.dates.at(-1)) {
+            continue;
+          } else if (divEntry.pay_date == value.divInfo.lastUpdate) {
+            break;
+          } else if (value.divInfo.lastUpdate < divEntry.pay_date) {
+            // calculate div payout
+            addToAUM += divEntry.cash_amount * value.shares;
+            // set divInfo to this pay_date
+            const doc = await Equity.findOneAndUpdate({ticker: ticker}, {divInfo: {
+              lastUpdate: divEntry.pay_date,
+              payoutRatio: divEntry.cash_amount,
+              payout: addToAUM,
+              frequency: divEntry.frequency
+            }});
+
+            break;
+          }
+        }
+      }
+    }
+  )
+  return addToAUM;
+}
+
 
 
 async function updateAUM(startDate, spy, js, cash) {
   var aum = [];
-  var assetWorth = [];
   for (let i = spy.dates.indexOf(startDate); i < spy.dates.length; i++) {
     var curDate = spy.dates[i];
     var addToAUM = cash;
@@ -55,37 +95,9 @@ async function updateAUM(startDate, spy, js, cash) {
           cash -= (value.entryPrice * value.shares);
           addToAUM -= value.entryPrice * value.shares;
         } if (curDate >= value.entryDate) {
-          // var posChange = (value.data[i]-value.data[i-1]) * value.shares;
-          // console.log(`   ${ticker}: ${posChange}`);
           // Check for dividends
-          if (value.divLastUpdate != undefined) {
-            fetch(fetchURL + ticker).then(
-              result => result.json()
-            ).then(
-              async (output) => {
-                console.log(ticker, output.results, "\n----------------------------------------", output.results.length);
-                if (output.results != undefined && output.results.length > 0) {
-                  // console.log(ticker, value)
-                  for (const divEntry of output.results) {
-                    // console.log(ticker + ":\n", divEntry.pay_date, "  ", value.divLastUpdate);
-                    
-                    if (divEntry.pay_date > spy.dates.at(-1)) {
-                      continue;
-                    } else if (divEntry.pay_date == value.divLastUpdate) {
-                      break;
-                    } else if (value.divLastUpdate < divEntry.pay_date) {
-                      // calculate div payout
-                      addToAUM += divEntry.cash_amount * value.shares;
-                      // set divLastUpdate to this pay_date
-                      console.log('test');
-                      const doc = await Equity.findOneAndUpdate({ticker: ticker}, {divLastUpdate: divEntry.pay_date});
-                    }
-                    console.log("\n");
-                  }
-                }
-              }
-            )
-                
+          if (value.divInfo != undefined) {
+            addToAUM += await getDivUpdate(ticker, value, spy);
           }
           addToAUM += (value.data[i] * value.shares);
         }
@@ -143,14 +155,14 @@ app.get("/getData", function(req, res) {
       var aumDates = [];
       var shares = [];
       var entryPrice = [];
-      var isDividend = [];
+      var divInfo = [];
       var assetClass = [];
       results.forEach(function(result) {
         tickers.push(result.ticker);
         startDates.push(result.startDate);
         shares.push(result.shares);
         entryPrice.push(result.entryPrice);
-        isDividend.push(result.divLastUpdate);
+        divInfo.push(result.divInfo);
         assetClass.push(result.assetClass);
       });
       tickers.push('SPY');
@@ -181,7 +193,7 @@ app.get("/getData", function(req, res) {
               entryDate: startDates[idx],
               data: adjClose,
               dates: dates,
-              divLastUpdate: isDividend[idx],
+              divInfo: divInfo[idx],
               assetClass: assetClass[idx]
             };
         }
@@ -249,10 +261,6 @@ app.get("/getData", function(req, res) {
                     if (err) {
                       console.log(err);
                     }
-                    // AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {cash: result.cash}, (err, testResult) => {
-                    //   if (err) {
-                    //     console.log(err);
-                    //   }
                       AUMData.findOne({_id: aum._id.toHexString()}, (err, testResult) => {
                         js["AUM"] = {
                           cash: testResult.cash,
@@ -261,7 +269,6 @@ app.get("/getData", function(req, res) {
                         }
                         res.send(js);
                       })
-                    // });
                   })
                 })
               } else {
@@ -325,7 +332,12 @@ app.get('/:ticker&:startDate&:startPrice&:shares&:asset', async function(req, re
         if (divEntry.pay_date > today) {
           continue;
         } else {
-          dividend = divEntry.pay_date;
+          dividend = {
+            lastUpdate: divEntry.pay_date,
+            payoutRatio: divEntry.cash_amount,
+            payout: null,
+            frequency: divEntry.frequency
+          }
           break;
         }
       }
@@ -344,7 +356,7 @@ app.get('/:ticker&:startDate&:startPrice&:shares&:asset', async function(req, re
         startDate: startDate,
         entryPrice: startPrice,
         shares: shares,
-        divLastUpdate: dividend,
+        divInfo: dividend,
         assetClass: assetClass
       });
 
