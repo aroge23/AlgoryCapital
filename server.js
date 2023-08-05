@@ -58,16 +58,17 @@ async function getDivUpdate(ticker, value, spy) {
       if (output.results != undefined && output.results.length > 0) {
         // console.log(ticker, value)
         for (const divEntry of output.results) {
-          if (divEntry.pay_date > spy.dates.at(-1)) {
+          // console.log(`${ticker} last update: ${value.divInfo.lastUpdate} ? ${divEntry.ex_dividend_date}`)
+          if (divEntry.ex_dividend_date > spy.dates.at(-1)) {
             continue;
-          } else if (divEntry.pay_date == value.divInfo.lastUpdate) {
+          } else if (divEntry.ex_dividend_date == value.divInfo.lastUpdate) {
             break;
-          } else if (value.divInfo.lastUpdate < divEntry.pay_date) {
+          } else if (value.divInfo.lastUpdate < divEntry.ex_dividend_date) {
             // calculate div payout
             addToAUM += divEntry.cash_amount * value.shares;
-            // set divInfo to this pay_date
+            // set divInfo to this ex_dividend_date
             const doc = await Equity.findOneAndUpdate({ticker: ticker}, {divInfo: {
-              lastUpdate: divEntry.pay_date,
+              lastUpdate: divEntry.ex_dividend_date,
               payoutRatio: divEntry.cash_amount,
               payout: addToAUM,
               frequency: divEntry.frequency
@@ -77,9 +78,9 @@ async function getDivUpdate(ticker, value, spy) {
           }
         }
       }
+      return addToAUM;
     }
   )
-  return addToAUM;
 }
 
 
@@ -96,7 +97,7 @@ async function updateAUM(startDate, spy, js, cash) {
           addToAUM -= value.entryPrice * value.shares;
         } if (curDate >= value.entryDate) {
           // Check for dividends
-          if (value.divInfo != undefined) {
+          if (value.divInfo?.lastUpdate != undefined) {
             addToAUM += await getDivUpdate(ticker, value, spy);
           }
           addToAUM += (value.data[i] * value.shares);
@@ -329,11 +330,11 @@ app.get('/:ticker&:startDate&:startPrice&:shares&:asset', async function(req, re
   ).then(
     (output) => {
       for (const divEntry of output.results) {
-        if (divEntry.pay_date > today) {
+        if (divEntry.ex_dividend_date > today) {
           continue;
         } else {
           dividend = {
-            lastUpdate: divEntry.pay_date,
+            lastUpdate: divEntry.ex_dividend_date,
             payoutRatio: divEntry.cash_amount,
             payout: null,
             frequency: divEntry.frequency
