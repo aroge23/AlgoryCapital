@@ -7,6 +7,7 @@ const axios = require('axios');
 const cors = require("cors");
 const e = require("express");
 const fetch = require("node-fetch");
+// const yfin2 = require("yahoo-finance2");
 require('dotenv').config()
 
 const app = express();
@@ -78,6 +79,7 @@ async function getDivUpdate(ticker, value, spy) {
           }
         }
       }
+      console.log(addToAUM);
       return addToAUM;
     }
   )
@@ -97,9 +99,10 @@ async function updateAUM(startDate, spy, js, cash) {
           addToAUM -= value.entryPrice * value.shares;
         } if (curDate >= value.entryDate) {
           // Check for dividends
-          if (value.divInfo?.lastUpdate != undefined) {
-            addToAUM += await getDivUpdate(ticker, value, spy);
-          }
+          // if (value.divInfo?.lastUpdate != undefined) {
+          //   addToAUM += await getDivUpdate(ticker, value, spy);
+          //   console.log(addToAUM);
+          // }
           addToAUM += (value.data[i] * value.shares);
         }
       }
@@ -249,7 +252,6 @@ app.get("/getData", function(req, res) {
                 //   }
                 // }
                 // cash = Number.parseFloat((aum.data.at(-1) - assetWorth.reduce((a,b)=>a+b)).toFixed(2));
-
                 updateAUM(updateStartDate, spy, js, aum.cash).then((result) => {
                   let newDates = spy.dates.slice(spy.dates.indexOf(aum.dates.at(-1)) + 1);
                   AUMData.findOneAndUpdate({_id: aum._id.toHexString()}, {
